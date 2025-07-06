@@ -1,4 +1,5 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright (c) Jared Taylor
+
 #pragma once
 
 #include "CoreMinimal.h"
