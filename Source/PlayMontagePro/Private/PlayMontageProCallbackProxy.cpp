@@ -126,14 +126,14 @@ void UPlayMontageProCallbackProxy::OnMontageBlendingOut(UAnimMontage* InMontage,
 {
 	if (bInterrupted)
 	{
+		UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnInterrupted, Notifies, this);
 		OnInterrupted.Broadcast(NAME_None);
 		bInterruptedCalledBeforeBlendingOut = true;
-		UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnInterrupted, Notifies, this);
 	}
 	else
 	{
-		OnBlendOut.Broadcast(NAME_None);
 		UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::BlendOut, Notifies, this);
+		OnBlendOut.Broadcast(NAME_None);
 	}
 	bFinished = true;
 }
@@ -142,13 +142,13 @@ void UPlayMontageProCallbackProxy::OnMontageEnded(UAnimMontage* InMontage, bool 
 {
 	if (!bInterrupted)
 	{
-		OnCompleted.Broadcast(NAME_None);
 		UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnCompleted, Notifies, this);
+		OnCompleted.Broadcast(NAME_None);
 	}
 	else if (!bInterruptedCalledBeforeBlendingOut)
 	{
-		OnInterrupted.Broadcast(NAME_None);
 		UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnInterrupted, Notifies, this);
+		OnInterrupted.Broadcast(NAME_None);
 	}
 	
 	UPlayMontageProStatics::ClearNotifyTimers(MeshComp->GetWorld(), Notifies);

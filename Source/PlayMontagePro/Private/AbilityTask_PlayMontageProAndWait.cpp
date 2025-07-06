@@ -1,6 +1,6 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright (c) Jared Taylor
 
-#include "AbilityTask_PlayMontageProAndWait.h"
+#include "Ability/AbilityTask_PlayMontageProAndWait.h"
 #include "Animation/AnimMontage.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/Character.h"
@@ -18,6 +18,9 @@ static FAutoConsoleVariableRef CVarPlayMontageProAndWaitFireInterruptOnAnimEndIn
 
 void UAbilityTask_PlayMontageProAndWait::OnMontageBlendingOut(UAnimMontage* Montage, bool bInterrupted)
 {
+	UPlayMontageProStatics::EnsureBroadcastNotifyEvents(
+		bInterrupted ? EAnimNotifyProEventType::OnInterrupted : EAnimNotifyProEventType::BlendOut, Notifies, this);
+	
 	const bool bPlayingThisMontage = (Montage == MontageToPlay) && Ability && Ability->GetCurrentMontage() == MontageToPlay;
 	if (bPlayingThisMontage)
 	{
@@ -42,8 +45,6 @@ void UAbilityTask_PlayMontageProAndWait::OnMontageBlendingOut(UAnimMontage* Mont
 	{
 		if (bInterrupted)
 		{
-			UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnInterrupted, Notifies, this);
-			
             bAllowInterruptAfterBlendOut = false;
 			OnInterrupted.Broadcast();
 
@@ -54,8 +55,6 @@ void UAbilityTask_PlayMontageProAndWait::OnMontageBlendingOut(UAnimMontage* Mont
 		}
 		else
 		{
-			UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::BlendOut, Notifies, this);
-			
 			OnBlendOut.Broadcast();
 		}
 	}
@@ -71,12 +70,13 @@ void UAbilityTask_PlayMontageProAndWait::OnMontageBlendedIn(UAnimMontage* Montag
 
 void UAbilityTask_PlayMontageProAndWait::OnGameplayAbilityCancelled()
 {
+	UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnInterrupted, Notifies, this);
+
 	if (StopPlayingMontage() || bAllowInterruptAfterBlendOut)
 	{
 		// Let the BP handle the interrupt as well
 		if (ShouldBroadcastAbilityTaskDelegates())
 		{
-			UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnInterrupted, Notifies, this);
 			bAllowInterruptAfterBlendOut = false;
 			OnInterrupted.Broadcast();
 		}
@@ -90,19 +90,20 @@ void UAbilityTask_PlayMontageProAndWait::OnGameplayAbilityCancelled()
 
 void UAbilityTask_PlayMontageProAndWait::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	UPlayMontageProStatics::EnsureBroadcastNotifyEvents(
+		bInterrupted ? EAnimNotifyProEventType::OnInterrupted : EAnimNotifyProEventType::OnCompleted, Notifies, this);
+
 	if (!bInterrupted)
 	{
 		if (ShouldBroadcastAbilityTaskDelegates())
 		{
-			UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnCompleted, Notifies, this);
 			OnCompleted.Broadcast();
 		}
 	}
-	else if(bAllowInterruptAfterBlendOut && GPlayMontageProAndWaitFireInterruptOnAnimEndInterrupt)
+	else if (bAllowInterruptAfterBlendOut && GPlayMontageProAndWaitFireInterruptOnAnimEndInterrupt)
 	{
 		if (ShouldBroadcastAbilityTaskDelegates())
 		{
-			UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnInterrupted, Notifies, this);
 			OnInterrupted.Broadcast();
 		}
 	}
@@ -222,9 +223,9 @@ void UAbilityTask_PlayMontageProAndWait::Activate()
 	if (!bPlayedMontage)
 	{
 		ABILITY_LOG(Warning, TEXT("UAbilityTask_PlayMontageProAndWait called in Ability %s failed to play montage %s; Task Instance Name %s."), *Ability->GetName(), *GetNameSafe(MontageToPlay),*InstanceName.ToString());
+		UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnCancelled, Notifies, this);
 		if (ShouldBroadcastAbilityTaskDelegates())
 		{
-			UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnCancelled, Notifies, this);
 			OnCancelled.Broadcast();
 		}
 	}
@@ -234,9 +235,9 @@ void UAbilityTask_PlayMontageProAndWait::Activate()
 
 void UAbilityTask_PlayMontageProAndWait::ExternalCancel()
 {
+	UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnCancelled, Notifies, this);
 	if (ShouldBroadcastAbilityTaskDelegates())
 	{
-		UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnCancelled, Notifies, this);
 		OnCancelled.Broadcast();
 	}
 	Super::ExternalCancel();
