@@ -94,5 +94,13 @@ Code was used from [GASShooter](https://github.com/tranek/GASShooter/) for multi
 
 ## Changelog
 
+### 1.1.0
+* Stop checking `ShouldBroadcastAbilityTaskDelegates()` for `EnsureBroadcastNotifyEvents()`
+	* Causing unintended behaviour and these notifies already track their broadcast states themselves
+	* Fixes a bug with ending montage due to ability end in particular.
+* Add `EnsureBroadcastNotifyEvents()` to `OnDestroy()`
+* `EnsureBroadcastNotifyEvents()` from `OnMontageBlendingOut()` no longer inappropriately ensures end states for notify states
+* Re-order `UPlayMontageProCallbackProxy` broadcast/ensure for consistency with other nodes
+
 ### 1.0.0
 * Initial Release
