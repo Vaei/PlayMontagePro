@@ -16,6 +16,9 @@ UAnimNotifyPro::UAnimNotifyPro(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
 #if WITH_EDITORONLY_DATA
+	// Pale yellow color
+	NotifyColor = FColor(255, 255, 200);
+	
 	auto ImplementedInBlueprint = [](const UFunction* Func) -> bool
 	{
 		return Func && ensure(Func->GetOuter())
