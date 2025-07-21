@@ -1,14 +1,12 @@
 // Copyright (c) Jared Taylor
 
 #include "Ability/AbilityTask_PlayMontageProAdvancedAndWait.h"
-#include "GameFramework/Character.h"
+#include "Animation/AnimMontage.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "GameFramework/Character.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemLog.h"
 #include "AbilitySystemGlobals.h"
-#include "Ability/PMPAbilitySystemComponent.h"
-#include "Ability/PMPGameplayAbility.h"
-#include "Logging/MessageLog.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(AbilityTask_PlayMontageProAdvancedAndWait)
 
@@ -114,8 +112,8 @@ void UAbilityTask_PlayMontageProAdvancedAndWait::OnMontageEnded(UAnimMontage* Mo
 }
 
 UAbilityTask_PlayMontageProAdvancedAndWait* UAbilityTask_PlayMontageProAdvancedAndWait::
-CreatePlayMontageProAdvancedAndWaitProxy(UPMPGameplayAbility* OwningAbility, FName TaskInstanceName,
-	FGameplayTagContainer EventTags, FMontageToPlay MontageToPlay, bool bDrivenMontagesMatchDriverDuration, float Rate,
+CreatePlayMontageProAdvancedAndWaitProxy(UGameplayAbility* OwningAbility, FName TaskInstanceName,
+	FGameplayTagContainer EventTags, UAnimMontage* MontageToPlay, bool bDrivenMontagesMatchDriverDuration, float Rate,
 	FName StartSection, FProNotifyParams ProNotifyParams, bool bOverrideBlendIn, FMontageBlendSettings BlendInOverride,
 	bool bStopWhenAbilityEnds, float AnimRootMotionTranslationScale, float StartTimeSeconds,
 	bool bAllowInterruptAfterBlendOut, float OverrideBlendOutTimeOnCancelAbility,
@@ -123,19 +121,9 @@ CreatePlayMontageProAdvancedAndWaitProxy(UPMPGameplayAbility* OwningAbility, FNa
 {
 	UAbilitySystemGlobals::NonShipping_ApplyGlobalAbilityScaler_Rate(Rate);
 
-#if !UE_BUILD_SHIPPING
-	if (!ensure(MontageToPlay.IsValid()))
-	{
-		FMessageLog("PIE").Error(FText::Format(NSLOCTEXT("PlayMontageProAdvanced", "InvalidMontage",
-			"UAbilityTask_PlayMontageProAdvancedAndWait: MontageToPlay is invalid for task {0} on ability {1}"),
-			FText::FromName(TaskInstanceName), FText::FromString(GetNameSafe(OwningAbility))));
-	}
-#endif
-	
 	UAbilityTask_PlayMontageProAdvancedAndWait* MyObj = NewAbilityTask<UAbilityTask_PlayMontageProAdvancedAndWait>(OwningAbility, TaskInstanceName);
 	MyObj->EventTags = EventTags;
-	MyObj->MontageToPlay = MontageToPlay.DriverMontage;
-	MyObj->DrivenMontages = MontageToPlay.DrivenMontages;
+	MyObj->MontageToPlay = MontageToPlay;
 	MyObj->bDrivenMontagesMatchDriverDuration = bDrivenMontagesMatchDriverDuration;
 	MyObj->Rate = Rate;
 	MyObj->StartSection = StartSection;
@@ -161,7 +149,7 @@ void UAbilityTask_PlayMontageProAdvancedAndWait::Activate()
 
 	bool bPlayedMontage = false;
 
-	if (UPMPAbilitySystemComponent* ASC = GetASC())
+	if (UAbilitySystemComponent* ASC = AbilitySystemComponent.Get())
 	{
 		const FGameplayAbilityActorInfo* ActorInfo = Ability->GetCurrentActorInfo();
 		UAnimInstance* AnimInstance = ActorInfo->GetAnimInstance();
@@ -171,26 +159,8 @@ void UAbilityTask_PlayMontageProAdvancedAndWait::Activate()
 			EventHandle = ASC->AddGameplayEventTagContainerDelegate(EventTags,
 				FGameplayEventTagMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnGameplayEvent));
 
-			// Play Driver Montage
-			const float Duration = ASC->PlayMontageForMesh(Ability, ActorInfo->SkeletalMeshComponent.Get(),
-				Ability->GetCurrentActivationInfo(), MontageToPlay, Rate, bOverrideBlendIn, BlendInOverride,
-				StartSection, StartTimeSeconds, true);
-
-			bPlayedMontage = Duration > 0.f;
-
-			// Play Driven Montages
-			if (bPlayedMontage)
+			if (ASC->PlayMontage(Ability, Ability->GetCurrentActivationInfo(), MontageToPlay, Rate, StartSection, StartTimeSeconds) > 0.f)
 			{
-				for (const auto& Montage : DrivenMontages.DrivenMontages)
-				{
-					PlayDrivenMontageForMesh(Duration, Montage, true);
-				}
-
-				for (const auto& Montage : DrivenMontages.LocalDrivenMontages)
-				{
-					PlayDrivenMontageForMesh(Duration, Montage, false);
-				}
-				
 				// Playing a montage could potentially fire off a callback into game code which could kill this ability! Early out if we are  pending kill.
 				if (ShouldBroadcastAbilityTaskDelegates() == false)
 				{
@@ -215,10 +185,12 @@ void UAbilityTask_PlayMontageProAdvancedAndWait::Activate()
 					Character->SetAnimRootMotionTranslationScale(AnimRootMotionTranslationScale);
 				}
 
+				bPlayedMontage = true;
+
 				if (ProNotifyParams.bEnableProNotifies)
 				{
 					// -- PlayMontagePro --
-				
+			
 					// Use the mesh comp's OnTickPose to detect time dilation changes
 					if (ProNotifyParams.bEnableCustomTimeDilation && GetMesh() && ActorInfo->AvatarActor.IsValid())
 					{
@@ -273,21 +245,6 @@ void UAbilityTask_PlayMontageProAdvancedAndWait::Activate()
 	}
 
 	SetWaitingOnAvatar();
-}
-
-void UAbilityTask_PlayMontageProAdvancedAndWait::PlayDrivenMontageForMesh(float Duration,
-	const FDrivenMontagePair& Montage, bool bReplicate) const
-{
-	const float ScaledRate = !bDrivenMontagesMatchDriverDuration ? Rate :
-		Rate * UPlayMontageProStatics::GetMontagePlayRateScaledByDuration(Montage.Montage, Duration);
-	
-	GetASC()->PlayMontageForMesh(Ability, Montage.Mesh, Ability->GetCurrentActivationInfo(), Montage.Montage,
-		ScaledRate, bOverrideBlendIn, BlendInOverride, StartSection, StartTimeSeconds, bReplicate);
-}
-
-UPMPAbilitySystemComponent* UAbilityTask_PlayMontageProAdvancedAndWait::GetASC() const
-{
-	return AbilitySystemComponent.IsValid() ? Cast<UPMPAbilitySystemComponent>(AbilitySystemComponent.Get()) : nullptr;
 }
 
 void UAbilityTask_PlayMontageProAdvancedAndWait::ExternalCancel()
@@ -382,108 +339,12 @@ void UAbilityTask_PlayMontageProAdvancedAndWait::OnDestroy(bool AbilityEnded)
 		}
 	}
 
-	if (UAbilitySystemComponent* ASC = GetASC())
+	if (UAbilitySystemComponent* ASC = AbilitySystemComponent.IsValid() ? AbilitySystemComponent.Get() : nullptr)
 	{
 		ASC->RemoveGameplayEventTagContainerDelegate(EventTags, EventHandle);
 	}
 
 	Super::OnDestroy(AbilityEnded);
-
-}
-
-void UAbilityTask_PlayMontageProAdvancedAndWait::MontageJumpToSection(FName SectionName, bool bOnlyDriver)
-{
-	if (Ability == nullptr)
-	{
-		return;
-	}
-
-	const FGameplayAbilityActorInfo* ActorInfo = Ability->GetCurrentActorInfo();
-	if (ActorInfo == nullptr)
-	{
-		return;
-	}
-
-	const UAnimInstance* AnimInstance = ActorInfo->GetAnimInstance();
-	if (AnimInstance == nullptr)
-	{
-		return;
-	}
-
-	UPMPAbilitySystemComponent* ASC = GetASC();
-	USkeletalMeshComponent* Mesh = ActorInfo && ActorInfo->SkeletalMeshComponent.IsValid() ? ActorInfo->SkeletalMeshComponent.Get() : nullptr;
-
-	if (ASC && Ability && Mesh)
-	{
-		if (ASC->GetAnimatingAbilityFromMesh(Mesh) == Ability && ASC->GetCurrentMontageForMesh(Mesh) == MontageToPlay)
-		{
-			// Driver Montage
-			ASC->CurrentMontageJumpToSectionForMesh(Mesh, SectionName);
-
-			if (!bOnlyDriver)
-			{
-				// Driven Montages
-				for (const auto& Montage : DrivenMontages.DrivenMontages)
-				{
-					ASC->CurrentMontageJumpToSectionForMesh(Montage.Mesh, SectionName);
-				}
-
-				// Local Driven Montages
-				for (const auto& Montage : DrivenMontages.LocalDrivenMontages)
-				{
-					ASC->CurrentMontageJumpToSectionForMesh(Montage.Mesh, SectionName);
-				}
-			}
-		}
-	}
-}
-
-void UAbilityTask_PlayMontageProAdvancedAndWait::MontageSetNextSection(FName FromSection, FName ToSection,
-	bool bOnlyDriver)
-{
-	if (Ability == nullptr)
-	{
-		return;
-	}
-
-	const FGameplayAbilityActorInfo* ActorInfo = Ability->GetCurrentActorInfo();
-	if (ActorInfo == nullptr)
-	{
-		return;
-	}
-
-	const UAnimInstance* AnimInstance = ActorInfo->GetAnimInstance();
-	if (AnimInstance == nullptr)
-	{
-		return;
-	}
-
-	UPMPAbilitySystemComponent* ASC = GetASC();
-	USkeletalMeshComponent* Mesh = ActorInfo && ActorInfo->SkeletalMeshComponent.IsValid() ? ActorInfo->SkeletalMeshComponent.Get() : nullptr;
-
-	if (ASC && Ability && Mesh)
-	{
-		if (ASC->GetAnimatingAbilityFromMesh(Mesh) == Ability && ASC->GetCurrentMontageForMesh(Mesh) == MontageToPlay)
-		{
-			// Driver Montage
-			ASC->CurrentMontageSetNextSectionNameForMesh(Mesh, FromSection, ToSection);
-
-			if (!bOnlyDriver)
-			{
-				// Driven Montages
-				for (const auto& Montage : DrivenMontages.DrivenMontages)
-				{
-					ASC->CurrentMontageSetNextSectionNameForMesh(Montage.Mesh, FromSection, ToSection);
-				}
-
-				// Local Driven Montages
-				for (const auto& Montage : DrivenMontages.LocalDrivenMontages)
-				{
-					ASC->CurrentMontageSetNextSectionNameForMesh(Montage.Mesh, FromSection, ToSection);
-				}
-			}
-		}
-	}
 }
 
 bool UAbilityTask_PlayMontageProAdvancedAndWait::StopPlayingMontage(float OverrideBlendOutTime)
@@ -507,12 +368,11 @@ bool UAbilityTask_PlayMontageProAdvancedAndWait::StopPlayingMontage(float Overri
 
 	// Check if the montage is still playing
 	// The ability would have been interrupted, in which case we should automatically stop the montage
-	UPMPAbilitySystemComponent* ASC = GetASC();
-	USkeletalMeshComponent* Mesh = ActorInfo && ActorInfo->SkeletalMeshComponent.IsValid() ? ActorInfo->SkeletalMeshComponent.Get() : nullptr;
-	
-	if (ASC && Ability && Mesh)
+	UAbilitySystemComponent* ASC = AbilitySystemComponent.Get();
+	if (ASC && Ability)
 	{
-		if (ASC->GetAnimatingAbilityFromMesh(Mesh) == Ability && ASC->GetCurrentMontageForMesh(Mesh) == MontageToPlay)
+		if (ASC->GetAnimatingAbility() == Ability
+			&& ASC->GetCurrentMontage() == MontageToPlay)
 		{
 			// Unbind delegates so they don't get called as well
 			FAnimMontageInstance* MontageInstance = AnimInstance->GetActiveInstanceForMontage(MontageToPlay);
@@ -523,61 +383,7 @@ bool UAbilityTask_PlayMontageProAdvancedAndWait::StopPlayingMontage(float Overri
 				MontageInstance->OnMontageEnded.Unbind();
 			}
 
-			// Driver Montage
-			ASC->CurrentMontageStopForMesh(Mesh, OverrideBlendOutTime);
-			
-			// Driven Montages
-			for (const auto& Montage : DrivenMontages.DrivenMontages)
-			{
-				ASC->CurrentMontageStopForMesh(Montage.Mesh, OverrideBlendOutTime);
-			}
-
-			// Local Driven Montages
-			for (const auto& Montage : DrivenMontages.LocalDrivenMontages)
-			{
-				ASC->CurrentMontageStopForMesh(Montage.Mesh, OverrideBlendOutTime);
-			}
-			
-			return true;
-		}
-	}
-
-	return false;
-}
-
-bool UAbilityTask_PlayMontageProAdvancedAndWait::IsPlayingMontage() const
-{
-	if (Ability == nullptr)
-	{
-		return false;
-	}
-
-	const FGameplayAbilityActorInfo* ActorInfo = Ability->GetCurrentActorInfo();
-	if (ActorInfo == nullptr)
-	{
-		return false;
-	}
-
-	const UAnimInstance* AnimInstance = ActorInfo->GetAnimInstance();
-	if (AnimInstance == nullptr)
-	{
-		return false;
-	}
-
-	// Check if the montage is still playing
-	// The ability would have been interrupted, in which case we should automatically stop the montage
-	UPMPAbilitySystemComponent* ASC = GetASC();
-	if (!GetASC())
-	{
-		return false;
-	}
-
-	USkeletalMeshComponent* Mesh = ActorInfo && ActorInfo->SkeletalMeshComponent.IsValid() ? ActorInfo->SkeletalMeshComponent.Get() : nullptr;
-	
-	if (ASC && Ability && Mesh)
-	{
-		if (ASC->GetAnimatingAbilityFromMesh(Mesh) == Ability && ASC->GetCurrentMontageForMesh(Mesh) == MontageToPlay)
-		{
+			ASC->CurrentMontageStop();
 			return true;
 		}
 	}

@@ -6,15 +6,12 @@
 #include "PlayMontageProStatics.h"
 #include "PlayMontageTypes.h"
 #include "UObject/ObjectMacros.h"
-#include "Animation/AnimInstance.h"
 #include "Abilities/Tasks/AbilityTask.h"
-#include "Animation/AnimMontage.h"
+#include "Animation/AnimInstance.h"
 #include "AbilityTask_PlayMontageProAdvancedAndWait.generated.h"
 
 struct FMontageBlendSettings;
 class UAnimMontage;
-class UPMPGameplayAbility;
-class UPMPAbilitySystemComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FMontageAdvancedWaitEventDelegate, FGameplayTag, EventTag, FGameplayEventData, EventData);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMontageAdvancedWaitNotifyDelegate, const FAnimNotifyProEvent&, Event);
@@ -75,7 +72,7 @@ public:
 	 * @param OwningAbility
 	 * @param TaskInstanceName Set to override the name of this task, for later querying
 	 * @param EventTags Event tags to listen for. Any gameplay events matching these tags will activate the EventReceived callback. If empty, all events will trigger callback
-	 * @param MontageToPlay The montage(s) to play on the character
+	 * @param MontageToPlay The montage to play on the character
 	 * @param bDrivenMontagesMatchDriverDuration If true, all driven montages will run for the same duration as the driver montage
 	 * @param Rate Change to play the montage faster or slower
 	 * @param StartSection If not empty, named montage section to start from
@@ -92,10 +89,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Ability|Tasks", meta = (DisplayName="PlayMontageProAdvancedAndWait",
 		HidePin = "OwningAbility", DefaultToSelf = "OwningAbility", BlueprintInternalUseOnly = "TRUE"))
 	static UAbilityTask_PlayMontageProAdvancedAndWait* CreatePlayMontageProAdvancedAndWaitProxy(
-		UPMPGameplayAbility* OwningAbility,
+		UGameplayAbility* OwningAbility,
 		FName TaskInstanceName,
 		FGameplayTagContainer EventTags,
-		FMontageToPlay MontageToPlay,
+		UAnimMontage* MontageToPlay,
 		bool bDrivenMontagesMatchDriverDuration = true,
 		float Rate = 1.f,
 		FName StartSection = NAME_None,
@@ -111,10 +108,6 @@ public:
 
 	virtual void Activate() override;
 
-	void PlayDrivenMontageForMesh(float Duration, const FDrivenMontagePair& Montage, bool bReplicate) const;
-	
-	UPMPAbilitySystemComponent* GetASC() const;
-	
 	/** Called when the ability is asked to cancel from an outside node. What this means depends on the individual task. By default, this does nothing other than ending the task. */
 	virtual void ExternalCancel() override;
 
@@ -144,18 +137,9 @@ protected:
 
 	virtual void OnDestroy(bool AbilityEnded) override;
 
-	UFUNCTION(BlueprintCallable, Category="Ability|Tasks")
-	void MontageJumpToSection(FName SectionName, bool bOnlyDriver = false);
-
-	UFUNCTION(BlueprintCallable, Category="Ability|Tasks")
-	void MontageSetNextSection(FName FromSection, FName ToSection, bool bOnlyDriver = false);
-	
 	/** Checks if the ability is playing a montage and stops that montage, returns true if a montage was stopped, false if not. */
 	UFUNCTION(BlueprintCallable, Category="Ability|Tasks")
 	bool StopPlayingMontage(float OverrideBlendOutTime = -1.f);
-
-	UFUNCTION(BlueprintCallable, Category="Ability|Tasks")
-	bool IsPlayingMontage() const;
 
 	FOnMontageBlendedInEnded BlendedInDelegate;
 	FOnMontageBlendingOutStarted BlendingOutDelegate;
@@ -168,9 +152,6 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UAnimMontage> MontageToPlay;
 	
-	UPROPERTY()
-	FDrivenMontages DrivenMontages;
-
 	UPROPERTY()
 	bool bDrivenMontagesMatchDriverDuration;
 
