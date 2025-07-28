@@ -94,6 +94,9 @@ Code was used from [GASShooter](https://github.com/tranek/GASShooter/) for multi
 
 ## Changelog
 
+### 1.1.2
+* Refactor delegates to prevent python conflict
+
 ### 1.1.1
 * Switch to pale yellow notify color to differientate
 

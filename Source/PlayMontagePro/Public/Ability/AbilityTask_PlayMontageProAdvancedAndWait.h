@@ -13,8 +13,8 @@
 struct FMontageBlendSettings;
 class UAnimMontage;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FMontageAdvancedWaitEventDelegate, FGameplayTag, EventTag, FGameplayEventData, EventData);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMontageAdvancedWaitNotifyDelegate, const FAnimNotifyProEvent&, Event);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FMontageProAdvancedWaitEventDelegate, FGameplayTag, EventTag, FGameplayEventData, EventData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMontageProAdvancedWaitNotifyDelegate, const FAnimNotifyProEvent&, Event);
 
 /** Ability task to simply play a montage. Many games will want to make a modified version of this task that looks for game-specific events */
 UCLASS()
@@ -24,31 +24,31 @@ class PLAYMONTAGEPRO_API UAbilityTask_PlayMontageProAdvancedAndWait : public UAb
 public:
 
 	UPROPERTY(BlueprintAssignable)
-	FMontageAdvancedWaitEventDelegate	OnCompleted;
+	FMontageProAdvancedWaitEventDelegate	OnCompleted;
 
 	UPROPERTY(BlueprintAssignable)
-	FMontageAdvancedWaitEventDelegate	OnBlendedIn;
+	FMontageProAdvancedWaitEventDelegate	OnBlendedIn;
 
 	UPROPERTY(BlueprintAssignable)
-	FMontageAdvancedWaitEventDelegate	OnBlendOut;
+	FMontageProAdvancedWaitEventDelegate	OnBlendOut;
 
 	UPROPERTY(BlueprintAssignable)
-	FMontageAdvancedWaitEventDelegate	OnInterrupted;
+	FMontageProAdvancedWaitEventDelegate	OnInterrupted;
 
 	UPROPERTY(BlueprintAssignable)
-	FMontageAdvancedWaitEventDelegate	OnCancelled;
+	FMontageProAdvancedWaitEventDelegate	OnCancelled;
 
 	UPROPERTY(BlueprintAssignable)
-	FMontageAdvancedWaitEventDelegate	OnEventReceived;
+	FMontageProAdvancedWaitEventDelegate	OnEventReceived;
 
 	UPROPERTY(BlueprintAssignable)
-	FMontageAdvancedWaitNotifyDelegate	OnNotify;
+	FMontageProAdvancedWaitNotifyDelegate	OnNotify;
 
 	UPROPERTY(BlueprintAssignable)
-	FMontageAdvancedWaitNotifyDelegate	OnNotifyStateBegin;
+	FMontageProAdvancedWaitNotifyDelegate	OnNotifyStateBegin;
 
 	UPROPERTY(BlueprintAssignable)
-	FMontageAdvancedWaitNotifyDelegate	OnNotifyStateEnd;
+	FMontageProAdvancedWaitNotifyDelegate	OnNotifyStateEnd;
 	
 	UFUNCTION()
 	void OnMontageBlendedIn(UAnimMontage* Montage);

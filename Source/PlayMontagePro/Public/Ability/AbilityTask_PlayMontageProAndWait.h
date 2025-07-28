@@ -13,7 +13,7 @@
 
 class UAnimMontage;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FMontageWaitSimpleDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FMontageProWaitSimpleDelegate);
 
 /** Ability task to simply play a montage. Many games will want to make a modified version of this task that looks for game-specific events */
 UCLASS()
@@ -23,19 +23,19 @@ class PLAYMONTAGEPRO_API UAbilityTask_PlayMontageProAndWait : public UAbilityTas
 public:
 
 	UPROPERTY(BlueprintAssignable)
-	FMontageWaitSimpleDelegate	OnCompleted;
+	FMontageProWaitSimpleDelegate	OnCompleted;
 
 	UPROPERTY(BlueprintAssignable)
-	FMontageWaitSimpleDelegate	OnBlendedIn;
+	FMontageProWaitSimpleDelegate	OnBlendedIn;
 
 	UPROPERTY(BlueprintAssignable)
-	FMontageWaitSimpleDelegate	OnBlendOut;
+	FMontageProWaitSimpleDelegate	OnBlendOut;
 
 	UPROPERTY(BlueprintAssignable)
-	FMontageWaitSimpleDelegate	OnInterrupted;
+	FMontageProWaitSimpleDelegate	OnInterrupted;
 
 	UPROPERTY(BlueprintAssignable)
-	FMontageWaitSimpleDelegate	OnCancelled;
+	FMontageProWaitSimpleDelegate	OnCancelled;
 
 	UFUNCTION()
 	void OnMontageBlendedIn(UAnimMontage* Montage);
