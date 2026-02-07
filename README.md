@@ -47,6 +47,8 @@ Otherwise, use the existing notify system.
   	* Ensure notifies trigger on anim end, even if they were not reached
 * Additional Blend in and out parameters
 
+<img width="1591" height="621" alt="UnrealEditor-Win64-DebugGame_2026-02-07_18-43-52" src="https://github.com/user-attachments/assets/98f4dd69-b6c3-48c7-ac1d-e874f33dc0cc" />
+
 ## Limitations
 
 > [!TIP]
