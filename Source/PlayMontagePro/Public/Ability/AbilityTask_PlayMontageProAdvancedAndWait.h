@@ -8,6 +8,7 @@
 #include "UObject/ObjectMacros.h"
 #include "Abilities/Tasks/AbilityTask.h"
 #include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
 #include "AbilityTask_PlayMontageProAdvancedAndWait.generated.h"
 
 struct FMontageBlendSettings;
