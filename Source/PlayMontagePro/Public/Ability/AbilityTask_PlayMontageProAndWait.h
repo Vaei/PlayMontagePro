@@ -89,9 +89,6 @@ public:
 	{
 		UPlayMontageProStatics::BroadcastNotifyEvent(Event, NotifyStatePairs.Find(Event), this);
 	}
-	virtual void NotifyCallback(const FAnimNotifyProEvent& Event) override {}
-	virtual void NotifyBeginCallback(const FAnimNotifyProEvent& Event) override {}
-	virtual void NotifyEndCallback(const FAnimNotifyProEvent& Event) override {}
 
 	virtual UAnimMontage* GetMontage() const override final;
 	virtual USkeletalMeshComponent* GetMesh() const override final;

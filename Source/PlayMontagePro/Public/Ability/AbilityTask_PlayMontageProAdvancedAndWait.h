@@ -14,7 +14,6 @@ struct FMontageBlendSettings;
 class UAnimMontage;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FMontageProAdvancedWaitEventDelegate, FGameplayTag, EventTag, FGameplayEventData, EventData);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMontageProAdvancedWaitNotifyDelegate, const FAnimNotifyProEvent&, Event);
 
 /** Ability task to simply play a montage. Many games will want to make a modified version of this task that looks for game-specific events */
 UCLASS()
@@ -41,15 +40,6 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FMontageProAdvancedWaitEventDelegate	OnEventReceived;
 
-	UPROPERTY(BlueprintAssignable)
-	FMontageProAdvancedWaitNotifyDelegate	OnNotify;
-
-	UPROPERTY(BlueprintAssignable)
-	FMontageProAdvancedWaitNotifyDelegate	OnNotifyStateBegin;
-
-	UPROPERTY(BlueprintAssignable)
-	FMontageProAdvancedWaitNotifyDelegate	OnNotifyStateEnd;
-	
 	UFUNCTION()
 	void OnMontageBlendedIn(UAnimMontage* Montage);
 
@@ -73,7 +63,6 @@ public:
 	 * @param TaskInstanceName Set to override the name of this task, for later querying
 	 * @param EventTags Event tags to listen for. Any gameplay events matching these tags will activate the EventReceived callback. If empty, all events will trigger callback
 	 * @param MontageToPlay The montage to play on the character
-	 * @param bDrivenMontagesMatchDriverDuration If true, all driven montages will run for the same duration as the driver montage
 	 * @param Rate Change to play the montage faster or slower
 	 * @param StartSection If not empty, named montage section to start from
 	 * @param ProNotifyParams Parameters for Pro notifies, which trigger reliably unlike Epic's notify system.
@@ -93,7 +82,6 @@ public:
 		FName TaskInstanceName,
 		FGameplayTagContainer EventTags,
 		UAnimMontage* MontageToPlay,
-		bool bDrivenMontagesMatchDriverDuration = true,
 		float Rate = 1.f,
 		FName StartSection = NAME_None,
 		FProNotifyParams ProNotifyParams = FProNotifyParams(),
@@ -119,9 +107,6 @@ public:
 	{
 		UPlayMontageProStatics::BroadcastNotifyEvent(Event, NotifyStatePairs.Find(Event), this);
 	}
-	virtual void NotifyCallback(const FAnimNotifyProEvent& Event) override { OnNotify.Broadcast(Event); }
-	virtual void NotifyBeginCallback(const FAnimNotifyProEvent& Event) override { OnNotifyStateBegin.Broadcast(Event); }
-	virtual void NotifyEndCallback(const FAnimNotifyProEvent& Event) override { OnNotifyStateEnd.Broadcast(Event); }
 
 	virtual UAnimMontage* GetMontage() const override final;
 	virtual USkeletalMeshComponent* GetMesh() const override final;
@@ -154,9 +139,6 @@ protected:
 	
 	UPROPERTY()
 	TObjectPtr<UAnimMontage> MontageToPlay;
-	
-	UPROPERTY()
-	bool bDrivenMontagesMatchDriverDuration;
 
 	UPROPERTY()
 	bool bOverrideBlendIn;

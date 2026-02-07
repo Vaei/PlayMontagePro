@@ -197,21 +197,18 @@ void UPlayMontageProStatics::BroadcastNotifyEvent(FAnimNotifyProEvent& Event, FA
 		if (Event.Notify && Event.TaskOwner.IsValid())
 		{
 			Event.Notify->NotifyCallback(Interface->GetMesh(), Interface->GetMontage());
-			Interface->NotifyCallback(Event);
 		}
 		break;
 	case EAnimNotifyProType::NotifyStateBegin:
 		if (Event.NotifyState && Event.TaskOwner.IsValid())
 		{
 			Event.NotifyState->NotifyBeginCallback(Interface->GetMesh(), Interface->GetMontage(), Event.Duration);
-			Interface->NotifyBeginCallback(Event);
 		}
 		break;
 	case EAnimNotifyProType::NotifyStateEnd:
 		if (Event.NotifyState && Event.TaskOwner.IsValid())
 		{
 			Event.NotifyState->NotifyEndCallback(Interface->GetMesh(), Interface->GetMontage());
-			Interface->NotifyEndCallback(Event);
 		}
 		break;
 	}

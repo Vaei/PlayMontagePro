@@ -113,8 +113,8 @@ void UAbilityTask_PlayMontageProAdvancedAndWait::OnMontageEnded(UAnimMontage* Mo
 
 UAbilityTask_PlayMontageProAdvancedAndWait* UAbilityTask_PlayMontageProAdvancedAndWait::
 CreatePlayMontageProAdvancedAndWaitProxy(UGameplayAbility* OwningAbility, FName TaskInstanceName,
-	FGameplayTagContainer EventTags, UAnimMontage* MontageToPlay, bool bDrivenMontagesMatchDriverDuration, float Rate,
-	FName StartSection, FProNotifyParams ProNotifyParams, bool bOverrideBlendIn, FMontageBlendSettings BlendInOverride,
+	FGameplayTagContainer EventTags, UAnimMontage* MontageToPlay, float Rate, FName StartSection, 
+	FProNotifyParams ProNotifyParams, bool bOverrideBlendIn, FMontageBlendSettings BlendInOverride,
 	bool bStopWhenAbilityEnds, float AnimRootMotionTranslationScale, float StartTimeSeconds,
 	bool bAllowInterruptAfterBlendOut, float OverrideBlendOutTimeOnCancelAbility,
 	float OverrideBlendOutTimeOnEndAbility)
@@ -124,7 +124,6 @@ CreatePlayMontageProAdvancedAndWaitProxy(UGameplayAbility* OwningAbility, FName 
 	UAbilityTask_PlayMontageProAdvancedAndWait* MyObj = NewAbilityTask<UAbilityTask_PlayMontageProAdvancedAndWait>(OwningAbility, TaskInstanceName);
 	MyObj->EventTags = EventTags;
 	MyObj->MontageToPlay = MontageToPlay;
-	MyObj->bDrivenMontagesMatchDriverDuration = bDrivenMontagesMatchDriverDuration;
 	MyObj->Rate = Rate;
 	MyObj->StartSection = StartSection;
 	MyObj->ProNotifyParams = ProNotifyParams;

@@ -25,10 +25,6 @@ class PLAYMONTAGEPRO_API IPlayMontageProInterface
 
 public:
 	virtual void BroadcastNotifyEvent(FAnimNotifyProEvent& Event) = 0;
-	
-	virtual void NotifyCallback(const FAnimNotifyProEvent& Event) = 0;
-	virtual void NotifyBeginCallback(const FAnimNotifyProEvent& Event) = 0;
-	virtual void NotifyEndCallback(const FAnimNotifyProEvent& Event) = 0;
 
 	virtual UAnimMontage* GetMontage() const = 0;
 	virtual USkeletalMeshComponent* GetMesh() const = 0;

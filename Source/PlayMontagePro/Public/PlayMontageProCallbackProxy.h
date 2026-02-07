@@ -18,7 +18,6 @@ class USkeletalMeshComponent;
 struct FBranchingPointNotifyPayload;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMontageProPlayDelegate, FName, NotifyName);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMontageProPlayNotifyDelegate, const FAnimNotifyProEvent&, Event);
 
 UCLASS()
 class PLAYMONTAGEPRO_API UPlayMontageProCallbackProxy : public UObject, public IPlayMontageProInterface
@@ -36,15 +35,6 @@ class PLAYMONTAGEPRO_API UPlayMontageProCallbackProxy : public UObject, public I
 	// Called when Montage has been interrupted (or failed to play)
 	UPROPERTY(BlueprintAssignable)
 	FOnMontageProPlayDelegate OnInterrupted;
-
-	UPROPERTY(BlueprintAssignable)
-	FOnMontageProPlayNotifyDelegate OnNotify;
-	
-	UPROPERTY(BlueprintAssignable)
-	FOnMontageProPlayNotifyDelegate OnNotifyStateBegin;
-
-	UPROPERTY(BlueprintAssignable)
-	FOnMontageProPlayNotifyDelegate OnNotifyStateEnd;
 
 	UPROPERTY()
 	uint32 NotifyId = 0;
@@ -79,9 +69,6 @@ public:
 	{
 		UPlayMontageProStatics::BroadcastNotifyEvent(Event, NotifyStatePairs.Find(Event), this);
 	}
-	virtual void NotifyCallback(const FAnimNotifyProEvent& Event) override { OnNotify.Broadcast(Event); }
-	virtual void NotifyBeginCallback(const FAnimNotifyProEvent& Event) override { OnNotifyStateBegin.Broadcast(Event); }
-	virtual void NotifyEndCallback(const FAnimNotifyProEvent& Event) override { OnNotifyStateEnd.Broadcast(Event); }
 
 	virtual UAnimMontage* GetMontage() const override final { return Montage.IsValid() ? Montage.Get() : nullptr; }
 	virtual USkeletalMeshComponent* GetMesh() const override final { return MeshComp.IsValid() ? MeshComp.Get() : nullptr; }
