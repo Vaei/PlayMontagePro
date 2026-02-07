@@ -17,9 +17,7 @@
 
 ## Get PMP
 
-You can clone this repo to your project's plugin folder.
-
-[Or download the pre-compiled binaries here](https://github.com/Vaei/PlayMontagePro/wiki/How-to-Use)
+You can clone this repo to your project's plugin folder, or you can retrieve the pre-compiled binaries from [Releases](https://github.com/Vaei/PlayMontagePro/releases).
 
 ## How to Use
 
