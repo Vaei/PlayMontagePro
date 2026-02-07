@@ -79,8 +79,10 @@ Otherwise, use the existing notify system.
 > [Download the pre-compiled binaries here](https://github.com/Vaei/PlayMontagePro/wiki/How-to-Use)
 
 ## How to Use
-> [!IMPORTANT]
-> [Read the Wiki to Learn How to use PlayMontagePro](https://github.com/Vaei/PlayMontagePro/wiki/How-to-Use)
+
+Subclass or Blueprint either `AnimNotifyPro` or `AnimNotifyStatePro`. Add to your montage (not anim sequence).
+
+Use the included nodes instead of the engine version e.g. `PlayMontageProAndWait` instead of `PlayMontageAndWait`
 
 ## Credits
 Code was used from [GASShooter](https://github.com/tranek/GASShooter/) for events
