@@ -12,6 +12,9 @@ public class PlayMontagePro : ModuleRules
 			new string[]
 			{
 				"Core",
+				"GameplayAbilities",
+				"GameplayTasks",
+				"GameplayTags",
 			}
 			);
 			

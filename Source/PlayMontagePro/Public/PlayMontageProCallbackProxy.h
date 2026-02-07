@@ -17,8 +17,8 @@ class UAnimMontage;
 class USkeletalMeshComponent;
 struct FBranchingPointNotifyPayload;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMontagePlayDelegate, FName, NotifyName);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMontagePlayNotifyDelegate, const FAnimNotifyProEvent&, Event);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMontageProPlayDelegate, FName, NotifyName);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMontageProPlayNotifyDelegate, const FAnimNotifyProEvent&, Event);
 
 UCLASS()
 class PLAYMONTAGEPRO_API UPlayMontageProCallbackProxy : public UObject, public IPlayMontageProInterface
@@ -27,24 +27,24 @@ class PLAYMONTAGEPRO_API UPlayMontageProCallbackProxy : public UObject, public I
 
 	// Called when Montage finished playing and wasn't interrupted
 	UPROPERTY(BlueprintAssignable)
-	FOnMontagePlayDelegate OnCompleted;
+	FOnMontageProPlayDelegate OnCompleted;
 
 	// Called when Montage starts blending out and is not interrupted
 	UPROPERTY(BlueprintAssignable)
-	FOnMontagePlayDelegate OnBlendOut;
+	FOnMontageProPlayDelegate OnBlendOut;
 
 	// Called when Montage has been interrupted (or failed to play)
 	UPROPERTY(BlueprintAssignable)
-	FOnMontagePlayDelegate OnInterrupted;
+	FOnMontageProPlayDelegate OnInterrupted;
 
 	UPROPERTY(BlueprintAssignable)
-	FOnMontagePlayNotifyDelegate OnNotify;
+	FOnMontageProPlayNotifyDelegate OnNotify;
 	
 	UPROPERTY(BlueprintAssignable)
-	FOnMontagePlayNotifyDelegate OnNotifyStateBegin;
+	FOnMontageProPlayNotifyDelegate OnNotifyStateBegin;
 
 	UPROPERTY(BlueprintAssignable)
-	FOnMontagePlayNotifyDelegate OnNotifyStateEnd;
+	FOnMontageProPlayNotifyDelegate OnNotifyStateEnd;
 
 	UPROPERTY()
 	uint32 NotifyId = 0;
@@ -57,6 +57,9 @@ class PLAYMONTAGEPRO_API UPlayMontageProCallbackProxy : public UObject, public I
 	
 	UPROPERTY()
 	TArray<FAnimNotifyProEvent> Notifies;
+		
+	UPROPERTY()
+	TMap<FAnimNotifyProEvent, FAnimNotifyProEvent> NotifyStatePairs;
 	
 	// Called to perform the query internally
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = "true"))
@@ -72,7 +75,10 @@ class PLAYMONTAGEPRO_API UPlayMontageProCallbackProxy : public UObject, public I
 
 public:
 	// Begin IPlayMontageProInterface
-	virtual void BroadcastNotifyEvent(FAnimNotifyProEvent& Event) override { UPlayMontageProStatics::BroadcastNotifyEvent(Event, this); }
+	virtual void BroadcastNotifyEvent(FAnimNotifyProEvent& Event) override
+	{
+		UPlayMontageProStatics::BroadcastNotifyEvent(Event, NotifyStatePairs.Find(Event), this);
+	}
 	virtual void NotifyCallback(const FAnimNotifyProEvent& Event) override { OnNotify.Broadcast(Event); }
 	virtual void NotifyBeginCallback(const FAnimNotifyProEvent& Event) override { OnNotifyStateBegin.Broadcast(Event); }
 	virtual void NotifyEndCallback(const FAnimNotifyProEvent& Event) override { OnNotifyStateEnd.Broadcast(Event); }

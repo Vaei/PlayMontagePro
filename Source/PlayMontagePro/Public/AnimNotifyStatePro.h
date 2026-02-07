@@ -59,14 +59,14 @@ public:
 public:
 	virtual bool ShouldTriggerNotify(USkeletalMeshComponent* MeshComp) const;
 	
-	virtual void NotifyBeginCallback(USkeletalMeshComponent* MeshComp, UAnimMontage* Montage);
+	virtual void NotifyBeginCallback(USkeletalMeshComponent* MeshComp, UAnimMontage* Montage, float TotalDuration);
 	virtual void NotifyEndCallback(USkeletalMeshComponent* MeshComp, UAnimMontage* Montage);
 	
-	virtual void OnNotifyBegin(USkeletalMeshComponent* MeshComp, UAnimMontage* Montage);
+	virtual void OnNotifyBegin(USkeletalMeshComponent* MeshComp, UAnimMontage* Montage, float TotalDuration);
 	virtual void OnNotifyEnd(USkeletalMeshComponent* MeshComp, UAnimMontage* Montage);
 	
 	UFUNCTION(BlueprintImplementableEvent, meta=(DisplayName="On Notify Begin"))
-	bool K2_OnNotifyBegin(USkeletalMeshComponent* MeshComp, UAnimMontage* Montage) const;
+	bool K2_OnNotifyBegin(USkeletalMeshComponent* MeshComp, UAnimMontage* Montage, float TotalDuration) const;
 
 	UFUNCTION(BlueprintImplementableEvent, meta=(DisplayName="On Notify End"))
 	bool K2_OnNotifyEnd(USkeletalMeshComponent* MeshComp, UAnimMontage* Montage) const;

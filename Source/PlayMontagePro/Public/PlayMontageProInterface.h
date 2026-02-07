@@ -34,5 +34,8 @@ public:
 	virtual USkeletalMeshComponent* GetMesh() const = 0;
 
 	virtual FTimerDelegate CreateTimerDelegate(FAnimNotifyProEvent& Event) = 0;
-	void OnNotifyTimer(FAnimNotifyProEvent* Event) { BroadcastNotifyEvent(*Event); }
+	void OnNotifyTimer(FAnimNotifyProEvent* Event)
+	{
+		BroadcastNotifyEvent(*Event);
+	}
 };
