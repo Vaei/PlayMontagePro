@@ -15,6 +15,18 @@
 > PMP is currently in beta
 > <br>There are many non-standard setups that have not been fully tested
 
+## Get PMP
+
+You can clone this repo to your project's plugin folder.
+
+[Or download the pre-compiled binaries here](https://github.com/Vaei/PlayMontagePro/wiki/How-to-Use)
+
+## How to Use
+
+Subclass or Blueprint either `AnimNotifyPro` or `AnimNotifyStatePro`. Override `OnNotifyBegin()` / `OnNotifyEnd()`. Add to your montage (not anim sequence).
+
+Use the included nodes instead of the engine version e.g. `PlayMontageProAndWait` instead of `PlayMontageAndWait`
+
 ## Why use PMP?
 
 > [!CAUTION]
@@ -72,17 +84,6 @@ Otherwise, use the existing notify system.
 	* Triggering behaviour may not always be identical - but you can report this if you believe it is a bug
  	* Use this for gameplay critical systems only, and use Epic's for cosmetics
   	* Because SimulatedProxies and Editor run on Epic's system, results may not be consistent
-
-## Get PMP
-
-> [!WARNING]
-> [Download the pre-compiled binaries here](https://github.com/Vaei/PlayMontagePro/wiki/How-to-Use)
-
-## How to Use
-
-Subclass or Blueprint either `AnimNotifyPro` or `AnimNotifyStatePro`. Add to your montage (not anim sequence).
-
-Use the included nodes instead of the engine version e.g. `PlayMontageProAndWait` instead of `PlayMontageAndWait`
 
 ## Credits
 Code was used from [GASShooter](https://github.com/tranek/GASShooter/) for events
