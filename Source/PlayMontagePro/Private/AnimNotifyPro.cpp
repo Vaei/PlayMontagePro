@@ -71,7 +71,7 @@ void UAnimNotifyPro::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase*
 	if (SimulatedProxyBehavior == EAnimNotifyLegacyType::Legacy)
 	{
 		const AActor* Owner = MeshComp->GetOwner();
-		if (Owner->GetNetMode() != NM_Standalone && Owner->GetLocalRole() == ROLE_SimulatedProxy)
+		if (IsValid(Owner) && Owner->GetNetMode() != NM_Standalone && Owner->GetLocalRole() == ROLE_SimulatedProxy)
 		{
 			// Legacy behavior, notify will be triggered on simulated proxies no different to the old system
 			UAnimMontage* Montage = Animation ? Cast<UAnimMontage>(Animation) : nullptr;

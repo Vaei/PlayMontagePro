@@ -7,6 +7,7 @@
 #include "TimerManager.h"
 #include "PlayMontageTypes.generated.h"
 
+class UAbilityTask;
 class UAnimNotifyStatePro;
 class UAnimNotifyPro;
 class UAnimMontage;
@@ -60,18 +61,23 @@ struct PLAYMONTAGEPRO_API FAnimNotifyProEvent
 {
 	GENERATED_BODY()
 	
-	FAnimNotifyProEvent(uint32 InNotifyId = 0, int32 InEnsureTriggerNotify = 0, EAnimNotifyProType InNotifyType = EAnimNotifyProType::Notify, float InTime = 0.f)
-		: EnsureTriggerNotify(InEnsureTriggerNotify)
+	FAnimNotifyProEvent(const UObject* InTaskOwner = nullptr, uint32 InNotifyId = 0, int32 InEnsureTriggerNotify = 0, 
+		EAnimNotifyProType InNotifyType = EAnimNotifyProType::Notify, float InTime = 0.f, float InDuration = 0.f)
+		: TaskOwner(InTaskOwner)
+		, EnsureTriggerNotify(InEnsureTriggerNotify)
 		, bEnsureEndStateIfTriggered(true)
 		, Time(InTime)
+		, Duration(InDuration)
 		, NotifyId(InNotifyId)
 		, bHasBroadcast(false)
 		, bIsEndState(false)
 		, bNotifySkipped(false)
-		, NotifyStatePair(nullptr)
 		, NotifyType(InNotifyType)
 	{}
 
+	UPROPERTY()
+	TWeakObjectPtr<const UObject> TaskOwner;
+	
 	/** Bitmask for ensuring that notifies are triggered if the montage aborts before they're reached when aborted due to these conditions */
 	UPROPERTY()
 	int32 EnsureTriggerNotify;
@@ -83,6 +89,10 @@ struct PLAYMONTAGEPRO_API FAnimNotifyProEvent
 	/** Time at which the notify should be triggered */
 	UPROPERTY()
 	float Time;
+	
+	/** Duration of the notify, used for notify states */
+	UPROPERTY()
+	float Duration;
 
 	/** Unique ID for the notify, used to identify it in the list of notifies */
 	UPROPERTY()
@@ -100,9 +110,6 @@ struct PLAYMONTAGEPRO_API FAnimNotifyProEvent
 	UPROPERTY()
 	bool bNotifySkipped;
 
-	/** Pointer to the paired notify state, used for notify states to link begin and end states */
-	TObjectPtr<FAnimNotifyProEvent> NotifyStatePair;
-
 	/** Type of the notify, used to determine which callback to use */
 	EAnimNotifyProType NotifyType;
 
@@ -114,23 +121,16 @@ struct PLAYMONTAGEPRO_API FAnimNotifyProEvent
 
 	/** Weak pointer to the notify object, used to call the notify callback */
 	UPROPERTY()
-	TWeakObjectPtr<UAnimNotifyPro> Notify;
+	TObjectPtr<UAnimNotifyPro> Notify;
 
 	/** Weak pointer to the notify state object, used to call the notify state callbacks */
 	UPROPERTY()
-	TWeakObjectPtr<UAnimNotifyStatePro> NotifyState;
-
-	/** Function to call when the timer expires, used to trigger the notify */
-	void OnTimer();
+	TObjectPtr<UAnimNotifyStatePro> NotifyState;
 
 	/** Clears the timer and delegate, used to clean up the notify when it is no longer needed */
-	void ClearTimers()
-	{
-		if (Timer.IsValid())			{ Timer.Invalidate(); }
-		if (TimerDelegate.IsBound())	{ TimerDelegate.Unbind(); }
-	}
+	void ClearTimers();
 
-	bool IsValid() const { return NotifyId > 0 && (Notify.IsValid() || NotifyState.IsValid()); }
+	bool IsValidEvent() const;
 
 	bool operator==(const FAnimNotifyProEvent& Other) const
 	{
@@ -141,7 +141,14 @@ struct PLAYMONTAGEPRO_API FAnimNotifyProEvent
 	{
 		return !(*this == Other);
 	}
+	
+	uint32 GetTypeHash() const { return NotifyId; }
 };
+
+inline uint32 GetTypeHash(const FAnimNotifyProEvent& NotifyProEvent)
+{
+	return NotifyProEvent.GetTypeHash();
+}
 
 /**
  * Parameters for Pro notifies, which trigger reliably unlike Epic's notify system.

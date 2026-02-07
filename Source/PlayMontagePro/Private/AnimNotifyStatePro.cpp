@@ -97,7 +97,7 @@ bool UAnimNotifyStatePro::WantsSimulatedProxyNotify(const USkeletalMeshComponent
 	if (SimulatedProxyBehavior == EAnimNotifyLegacyType::Legacy)
 	{
 		const AActor* Owner = MeshComp->GetOwner();
-		if (Owner->GetNetMode() != NM_Standalone && Owner->GetLocalRole() == ROLE_SimulatedProxy)
+		if (IsValid(Owner) && Owner->GetNetMode() != NM_Standalone && Owner->GetLocalRole() == ROLE_SimulatedProxy)
 		{
 			return true;
 		}
@@ -114,7 +114,7 @@ void UAnimNotifyStatePro::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSeq
 	if (MeshComp->IsA<UDebugSkelMeshComponent>() && ShouldFireInEditor())
 	{
 		UAnimMontage* Montage = Animation ? Cast<UAnimMontage>(Animation) : nullptr;
-		OnNotifyBegin(MeshComp, Montage);
+		OnNotifyBegin(MeshComp, Montage, TotalDuration);
 	}
 #endif
 
@@ -122,7 +122,7 @@ void UAnimNotifyStatePro::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSeq
 	{
 		// Legacy behavior, notify will be triggered on simulated proxies no different to the old system
 		UAnimMontage* Montage = Animation ? Cast<UAnimMontage>(Animation) : nullptr;
-		OnNotifyBegin(MeshComp, Montage);
+		OnNotifyBegin(MeshComp, Montage, TotalDuration);
 	}
 }
 
@@ -151,11 +151,11 @@ bool UAnimNotifyStatePro::ShouldTriggerNotify(USkeletalMeshComponent* MeshComp) 
 	return !MeshComp || MeshComp->GetNetMode() != NM_DedicatedServer || bTriggerOnDedicatedServer;
 }
 
-void UAnimNotifyStatePro::NotifyBeginCallback(USkeletalMeshComponent* MeshComp, UAnimMontage* Montage)
+void UAnimNotifyStatePro::NotifyBeginCallback(USkeletalMeshComponent* MeshComp, UAnimMontage* Montage, float TotalDuration)
 {
 	if (ShouldTriggerNotify(MeshComp))
 	{
-		OnNotifyBegin(MeshComp, Montage);
+		OnNotifyBegin(MeshComp, Montage, TotalDuration);
 	}
 }
 
@@ -167,9 +167,9 @@ void UAnimNotifyStatePro::NotifyEndCallback(USkeletalMeshComponent* MeshComp, UA
 	}
 }
 
-void UAnimNotifyStatePro::OnNotifyBegin(USkeletalMeshComponent* MeshComp, UAnimMontage* Montage)
+void UAnimNotifyStatePro::OnNotifyBegin(USkeletalMeshComponent* MeshComp, UAnimMontage* Montage, float TotalDuration)
 {
-	K2_OnNotifyBegin(MeshComp, Montage);
+	K2_OnNotifyBegin(MeshComp, Montage, TotalDuration);
 }
 
 void UAnimNotifyStatePro::OnNotifyEnd(USkeletalMeshComponent* MeshComp, UAnimMontage* Montage)

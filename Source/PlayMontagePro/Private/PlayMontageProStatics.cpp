@@ -22,8 +22,9 @@ float UPlayMontageProStatics::GetMontagePlayRateScaledByDuration(const UAnimMont
 	return 1.f;
 }
 
-void UPlayMontageProStatics::GatherNotifies(UAnimMontage* Montage, uint32& NotifyId,
-	TArray<FAnimNotifyProEvent>& Notifies, const FName& Section, float StartPosition, float TimeDilation)
+void UPlayMontageProStatics::GatherNotifies(const UObject* TaskOwner, UAnimMontage* Montage, uint32& NotifyId,
+	TArray<FAnimNotifyProEvent>& Notifies, TMap<FAnimNotifyProEvent, FAnimNotifyProEvent>& NotifyStatePairs, 
+	const FName& Section, float StartPosition, float TimeDilation)
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(UPlayMontageProStatics::GatherNotifies);
 
@@ -34,6 +35,7 @@ void UPlayMontageProStatics::GatherNotifies(UAnimMontage* Montage, uint32& Notif
 	for (FAnimNotifyEvent& MontageNotify : MontageNotifies)
 	{
 		const float NotifyTime = MontageNotify.GetTime();
+		const float NotifyDuration = MontageNotify.GetDuration() * TimeDilation;
 		const float StartTime = (NotifyTime - StartPosition) * TimeDilation;
 
 		// Add notify to the list of notifies
@@ -47,56 +49,80 @@ void UPlayMontageProStatics::GatherNotifies(UAnimMontage* Montage, uint32& Notif
 			}
 			
 			// Create notify event
-			FAnimNotifyProEvent NotifyEvent = { ++NotifyId, Notify->EnsureTriggerNotify,
-				EAnimNotifyProType::Notify, StartTime };
+			FAnimNotifyProEvent NotifyEvent = { TaskOwner, ++NotifyId, Notify->EnsureTriggerNotify,
+				EAnimNotifyProType::Notify, StartTime, NotifyDuration };
 
 			// Cache notify
 			NotifyEvent.Notify = Notify;
 			
+			// Add to notifies list
 			Notifies.Add(NotifyEvent);
 		}
 
 		// Add notify states to the list of notifies
 		if (UAnimNotifyStatePro* Notify = MontageNotify.NotifyStateClass ? Cast<UAnimNotifyStatePro>(MontageNotify.NotifyStateClass) : nullptr)
 		{
+			// Only if section is the same as the one we are playing
+			const int32 SectionIndexAtTime = Montage->GetSectionIndexFromPosition(NotifyTime);
+			if (SectionIndexAtTime != SectionIndex)
+			{
+				continue;
+			}
+			
 			// Compute end time for the notify end state
-			const float EndTime = StartTime + (MontageNotify.GetDuration() * TimeDilation);
+			const float EndTime = StartTime + NotifyDuration;
 
 			// Start state notify
-			FAnimNotifyProEvent& NotifyBeginEvent = Notifies.Add_GetRef({ ++NotifyId, Notify->EnsureTriggerNotify,
-				EAnimNotifyProType::NotifyStateBegin, StartTime });
+			FAnimNotifyProEvent NotifyBeginEvent = { TaskOwner, ++NotifyId, Notify->EnsureTriggerNotify,
+				EAnimNotifyProType::NotifyStateBegin, StartTime, NotifyDuration };
 
-			// End state notify
-			FAnimNotifyProEvent& NotifyEndEvent = Notifies.Add_GetRef({ ++NotifyId, Notify->EnsureTriggerNotify,
-				EAnimNotifyProType::NotifyStateEnd, EndTime });
+			// Start state notify
+			FAnimNotifyProEvent NotifyEndEvent = { TaskOwner, ++NotifyId, Notify->EnsureTriggerNotify,
+				EAnimNotifyProType::NotifyStateEnd, EndTime };
+			
+			// Mark as end state
+			NotifyEndEvent.bIsEndState = true;
 
 			// Cache notify state
 			NotifyBeginEvent.NotifyState = Notify;
 			NotifyEndEvent.NotifyState = Notify;
 
-			// Mark as end state
-			NotifyEndEvent.bIsEndState = true;
+			// Add to notifies list
+			int32 BeginIndex = Notifies.Add(NotifyBeginEvent);
+			int32 EndIndex = Notifies.Add(NotifyEndEvent);
 
 			// Pair begin and end states
-			NotifyBeginEvent.NotifyStatePair = &NotifyEndEvent;
-			NotifyEndEvent.NotifyStatePair = &NotifyBeginEvent;
+			if (ensure(Notifies[BeginIndex].IsValidEvent() && Notifies[EndIndex].IsValidEvent()))
+			{
+				NotifyStatePairs.Add(Notifies[BeginIndex], Notifies[EndIndex]);
+				NotifyStatePairs.Add(Notifies[EndIndex], Notifies[BeginIndex]);
+			}
 		}
 	}
 }
 
 void UPlayMontageProStatics::HandleHistoricNotifies(TArray<FAnimNotifyProEvent>& Notifies,
-	bool bTriggerNotifiesBeforeStartTime, IPlayMontageProInterface* Interface)
+	TMap<FAnimNotifyProEvent, FAnimNotifyProEvent>& NotifyStatePairs, bool bTriggerNotifiesBeforeStartTime, 
+	float StartTime, IPlayMontageProInterface* Interface)
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(UPlayMontageProStatics::TriggerHistoricNotifies);
 	
 	// Trigger notifies before start time and remove them, if we want to trigger them before the start time
 	for (FAnimNotifyProEvent& Notify : Notifies)
 	{
-		if (Notify.Time <= 0.f)
+		FAnimNotifyProEvent* NotifyStatePair = NotifyStatePairs.Find(Notify);
+		
+		if (FMath::IsNearlyEqual(Notify.Time, StartTime, UE_KINDA_SMALL_NUMBER))
+		{
+			BroadcastNotifyEvent(Notify, NotifyStatePair, Interface);
+			continue;
+		}
+		
+		if (Notify.Time < StartTime)
 		{
 			if (bTriggerNotifiesBeforeStartTime)
 			{
-				BroadcastNotifyEvent(Notify, Interface);
+				BroadcastNotifyEvent(Notify, NotifyStatePair, Interface);
 			}
 			else
 			{
@@ -134,7 +160,7 @@ void UPlayMontageProStatics::ClearNotifyTimers(const UWorld* World, TArray<FAnim
 	}
 }
 
-void UPlayMontageProStatics::BroadcastNotifyEvent(FAnimNotifyProEvent& Event, IPlayMontageProInterface* Interface)
+void UPlayMontageProStatics::BroadcastNotifyEvent(FAnimNotifyProEvent& Event, FAnimNotifyProEvent* NotifyStatePair, IPlayMontageProInterface* Interface)
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(UPlayMontageProStatics::BroadcastNotifyEvent);
 	
@@ -145,18 +171,18 @@ void UPlayMontageProStatics::BroadcastNotifyEvent(FAnimNotifyProEvent& Event, IP
 	}
 
 	// Ensure the start state broadcasts first if this is the end state
-	if (Event.bIsEndState && Event.NotifyStatePair)
+	if (Event.bIsEndState && NotifyStatePair)
 	{
 		// If our start state was skipped, we can't broadcast the end state
-		if (Event.NotifyStatePair->bNotifySkipped)
+		if (NotifyStatePair->bNotifySkipped)
 		{
 			return;
 		}
 
 		// Broadcast the start state first
-		if (!Event.NotifyStatePair->bHasBroadcast)
+		if (!NotifyStatePair->bHasBroadcast)
 		{
-			BroadcastNotifyEvent(*Event.NotifyStatePair, Interface);
+			BroadcastNotifyEvent(*NotifyStatePair, nullptr, Interface);
 		}
 	}
 
@@ -168,21 +194,21 @@ void UPlayMontageProStatics::BroadcastNotifyEvent(FAnimNotifyProEvent& Event, IP
 	switch (Event.NotifyType)
 	{
 	case EAnimNotifyProType::Notify:
-		if (Event.Notify.IsValid())
+		if (Event.Notify && Event.TaskOwner.IsValid())
 		{
 			Event.Notify->NotifyCallback(Interface->GetMesh(), Interface->GetMontage());
 			Interface->NotifyCallback(Event);
 		}
 		break;
 	case EAnimNotifyProType::NotifyStateBegin:
-		if (Event.NotifyState.IsValid())
+		if (Event.NotifyState && Event.TaskOwner.IsValid())
 		{
-			Event.NotifyState->NotifyBeginCallback(Interface->GetMesh(), Interface->GetMontage());
+			Event.NotifyState->NotifyBeginCallback(Interface->GetMesh(), Interface->GetMontage(), Event.Duration);
 			Interface->NotifyBeginCallback(Event);
 		}
 		break;
 	case EAnimNotifyProType::NotifyStateEnd:
-		if (Event.NotifyState.IsValid())
+		if (Event.NotifyState && Event.TaskOwner.IsValid())
 		{
 			Event.NotifyState->NotifyEndCallback(Interface->GetMesh(), Interface->GetMontage());
 			Interface->NotifyEndCallback(Event);
@@ -191,8 +217,8 @@ void UPlayMontageProStatics::BroadcastNotifyEvent(FAnimNotifyProEvent& Event, IP
 	}
 }
 
-void UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType EventType,
-	TArray<FAnimNotifyProEvent>& Notifies, IPlayMontageProInterface* Interface)
+void UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType EventType,	TArray<FAnimNotifyProEvent>& Notifies,
+	TMap<FAnimNotifyProEvent, FAnimNotifyProEvent>& NotifyStatePairs, IPlayMontageProInterface* Interface)
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(UPlayMontageProStatics::EnsureBroadcastNotifyEvents);
 	
@@ -211,7 +237,8 @@ void UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType
 		}
 		
 		// Ensure that the end state is reached if the start state notify was triggered
-		if (EventType != EAnimNotifyProEventType::BlendOut && Event.bIsEndState && Event.NotifyStatePair && Event.NotifyStatePair->bHasBroadcast)
+		const FAnimNotifyProEvent* NotifyStatePair = NotifyStatePairs.Find(Event);
+		if (EventType != EAnimNotifyProEventType::BlendOut && Event.bIsEndState && NotifyStatePair && NotifyStatePair->bHasBroadcast)
 		{
 			Interface->BroadcastNotifyEvent(Event);
 		}
@@ -238,7 +265,7 @@ void UPlayMontageProStatics::HandleTimeDilation(IPlayMontageProInterface* Interf
 			// Any elapsed time should be maintained, and only remaining time should be updated
 			// Then we need to restart the timer based on the new time, without the already elapsed time
 			// So that only the remaining time is affected by time dilation changes
-			if (Notify.IsValid() && !Notify.bNotifySkipped && !Notify.bHasBroadcast && Notify.Timer.IsValid())
+			if (Notify.IsValidEvent() && !Notify.bNotifySkipped && !Notify.bHasBroadcast && Notify.Timer.IsValid())
 			{
 				const float ElapsedTime = World->GetTimerManager().GetTimerElapsed(Notify.Timer);
 				const float RemainingTime = Notify.Time - ElapsedTime;

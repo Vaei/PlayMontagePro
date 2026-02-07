@@ -85,7 +85,10 @@ public:
 	
 public:
 	// Begin IPlayMontageProInterface
-	virtual void BroadcastNotifyEvent(FAnimNotifyProEvent& Event) override { UPlayMontageProStatics::BroadcastNotifyEvent(Event, this); }
+	virtual void BroadcastNotifyEvent(FAnimNotifyProEvent& Event) override
+	{
+		UPlayMontageProStatics::BroadcastNotifyEvent(Event, NotifyStatePairs.Find(Event), this);
+	}
 	virtual void NotifyCallback(const FAnimNotifyProEvent& Event) override {}
 	virtual void NotifyBeginCallback(const FAnimNotifyProEvent& Event) override {}
 	virtual void NotifyEndCallback(const FAnimNotifyProEvent& Event) override {}
@@ -145,6 +148,9 @@ protected:
 	
 	UPROPERTY()
 	TArray<FAnimNotifyProEvent> Notifies;
+		
+	UPROPERTY()
+	TMap<FAnimNotifyProEvent, FAnimNotifyProEvent> NotifyStatePairs;
 	
 	FDelegateHandle TickPoseHandle;
 	

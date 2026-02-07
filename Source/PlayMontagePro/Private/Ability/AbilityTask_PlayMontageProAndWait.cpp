@@ -19,7 +19,7 @@ static FAutoConsoleVariableRef CVarPlayMontageProAndWaitFireInterruptOnAnimEndIn
 void UAbilityTask_PlayMontageProAndWait::OnMontageBlendingOut(UAnimMontage* Montage, bool bInterrupted)
 {
 	UPlayMontageProStatics::EnsureBroadcastNotifyEvents(
-		bInterrupted ? EAnimNotifyProEventType::OnInterrupted : EAnimNotifyProEventType::BlendOut, Notifies, this);
+		bInterrupted ? EAnimNotifyProEventType::OnInterrupted : EAnimNotifyProEventType::BlendOut, Notifies, NotifyStatePairs, this);
 	
 	const bool bPlayingThisMontage = (Montage == MontageToPlay) && Ability && Ability->GetCurrentMontage() == MontageToPlay;
 	if (bPlayingThisMontage)
@@ -70,7 +70,7 @@ void UAbilityTask_PlayMontageProAndWait::OnMontageBlendedIn(UAnimMontage* Montag
 
 void UAbilityTask_PlayMontageProAndWait::OnGameplayAbilityCancelled()
 {
-	UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnInterrupted, Notifies, this);
+	UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnInterrupted, Notifies, NotifyStatePairs, this);
 
 	if (StopPlayingMontage() || bAllowInterruptAfterBlendOut)
 	{
@@ -91,7 +91,7 @@ void UAbilityTask_PlayMontageProAndWait::OnGameplayAbilityCancelled()
 void UAbilityTask_PlayMontageProAndWait::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
 	UPlayMontageProStatics::EnsureBroadcastNotifyEvents(
-		bInterrupted ? EAnimNotifyProEventType::OnInterrupted : EAnimNotifyProEventType::OnCompleted, Notifies, this);
+		bInterrupted ? EAnimNotifyProEventType::OnInterrupted : EAnimNotifyProEventType::OnCompleted, Notifies, NotifyStatePairs, this);
 
 	if (!bInterrupted)
 	{
@@ -201,10 +201,10 @@ void UAbilityTask_PlayMontageProAndWait::Activate()
 
 				// Gather notifies from montage
 				const FName Section = AnimInstance->Montage_GetCurrentSection(MontageToPlay);
-				UPlayMontageProStatics::GatherNotifies(MontageToPlay, NotifyId, Notifies, Section, StartTimeSeconds, TimeDilation);
+				UPlayMontageProStatics::GatherNotifies(this, MontageToPlay, NotifyId, Notifies, NotifyStatePairs, Section, StartTimeSeconds, TimeDilation);
 
 				// Trigger notifies before start time and remove them, if we want to trigger them before the start time
-				UPlayMontageProStatics::HandleHistoricNotifies(Notifies, bTriggerNotifiesBeforeStartTime, this);
+				UPlayMontageProStatics::HandleHistoricNotifies(Notifies, NotifyStatePairs, bTriggerNotifiesBeforeStartTime, StartTimeSeconds, this);
 
 				// Create timer delegates for notifies
 				UPlayMontageProStatics::SetupNotifyTimers(this, GetWorld(), Notifies);
@@ -223,7 +223,7 @@ void UAbilityTask_PlayMontageProAndWait::Activate()
 	if (!bPlayedMontage)
 	{
 		ABILITY_LOG(Warning, TEXT("UAbilityTask_PlayMontageProAndWait called in Ability %s failed to play montage %s; Task Instance Name %s."), *Ability->GetName(), *GetNameSafe(MontageToPlay),*InstanceName.ToString());
-		UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnCancelled, Notifies, this);
+		UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnCancelled, Notifies, NotifyStatePairs, this);
 		if (ShouldBroadcastAbilityTaskDelegates())
 		{
 			OnCancelled.Broadcast();
@@ -235,7 +235,7 @@ void UAbilityTask_PlayMontageProAndWait::Activate()
 
 void UAbilityTask_PlayMontageProAndWait::ExternalCancel()
 {
-	UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnCancelled, Notifies, this);
+	UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnCancelled, Notifies, NotifyStatePairs, this);
 	if (ShouldBroadcastAbilityTaskDelegates())
 	{
 		OnCancelled.Broadcast();
@@ -276,7 +276,7 @@ void UAbilityTask_PlayMontageProAndWait::OnMontageSectionChanged(UAnimMontage* I
 	UPlayMontageProStatics::ClearNotifyTimers(GetWorld(), Notifies);
 
 	// Gather notifies from montage
-	UPlayMontageProStatics::GatherNotifies(InMontage, NotifyId, Notifies, SectionName, StartTime, TimeDilation);
+	UPlayMontageProStatics::GatherNotifies(this, InMontage, NotifyId, Notifies, NotifyStatePairs, SectionName, StartTime, TimeDilation);
 
 	// Create timer delegates for notifies
 	UPlayMontageProStatics::SetupNotifyTimers(this, GetWorld(), Notifies);
@@ -290,7 +290,7 @@ void UAbilityTask_PlayMontageProAndWait::OnTickPose(USkinnedMeshComponent* Skinn
 
 void UAbilityTask_PlayMontageProAndWait::OnDestroy(bool AbilityEnded)
 {
-	UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnCompleted, Notifies, this);
+	UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnCompleted, Notifies, NotifyStatePairs, this);
 	
 	if (TickPoseHandle.IsValid() && GetMesh())
 	{

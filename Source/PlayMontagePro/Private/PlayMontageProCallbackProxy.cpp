@@ -98,10 +98,10 @@ bool UPlayMontageProCallbackProxy::PlayMontagePro(USkeletalMeshComponent* InSkel
 
 				// Gather notifies from montage
 				const FName Section = AnimInstance->Montage_GetCurrentSection(MontageToPlay);
-				UPlayMontageProStatics::GatherNotifies(MontageToPlay, NotifyId, Notifies, Section, StartingPosition, TimeDilation);
+				UPlayMontageProStatics::GatherNotifies(this, MontageToPlay, NotifyId, Notifies, NotifyStatePairs, Section, StartingPosition, TimeDilation);
 
 				// Trigger notifies before start time and remove them, if we want to trigger them before the start time
-				UPlayMontageProStatics::HandleHistoricNotifies(Notifies, bTriggerNotifiesBeforeStartTime, this);
+				UPlayMontageProStatics::HandleHistoricNotifies(Notifies, NotifyStatePairs, bTriggerNotifiesBeforeStartTime, StartingPosition, this);
 
 				// Create timer delegates for notifies
 				UPlayMontageProStatics::SetupNotifyTimers(this, MeshComp->GetWorld(), Notifies);
@@ -126,13 +126,13 @@ void UPlayMontageProCallbackProxy::OnMontageBlendingOut(UAnimMontage* InMontage,
 {
 	if (bInterrupted)
 	{
-		UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnInterrupted, Notifies, this);
+		UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnInterrupted, Notifies, NotifyStatePairs, this);
 		OnInterrupted.Broadcast(NAME_None);
 		bInterruptedCalledBeforeBlendingOut = true;
 	}
 	else
 	{
-		UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::BlendOut, Notifies, this);
+		UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::BlendOut, Notifies, NotifyStatePairs, this);
 		OnBlendOut.Broadcast(NAME_None);
 	}
 	bFinished = true;
@@ -142,12 +142,12 @@ void UPlayMontageProCallbackProxy::OnMontageEnded(UAnimMontage* InMontage, bool 
 {
 	if (!bInterrupted)
 	{
-		UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnCompleted, Notifies, this);
+		UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnCompleted, Notifies, NotifyStatePairs, this);
 		OnCompleted.Broadcast(NAME_None);
 	}
 	else if (!bInterruptedCalledBeforeBlendingOut)
 	{
-		UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnInterrupted, Notifies, this);
+		UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType::OnInterrupted, Notifies, NotifyStatePairs, this);
 		OnInterrupted.Broadcast(NAME_None);
 	}
 	
@@ -168,7 +168,7 @@ void UPlayMontageProCallbackProxy::OnMontageSectionChanged(UAnimMontage* InMonta
 	UPlayMontageProStatics::ClearNotifyTimers(MeshComp->GetWorld(), Notifies);
 
 	// Gather notifies from montage
-	UPlayMontageProStatics::GatherNotifies(InMontage, NotifyId, Notifies, SectionName, StartTime, TimeDilation);
+	UPlayMontageProStatics::GatherNotifies(this, InMontage, NotifyId, Notifies, NotifyStatePairs, SectionName, StartTime, TimeDilation);
 
 	// Create timer delegates for notifies
 	UPlayMontageProStatics::SetupNotifyTimers(this, MeshComp->GetWorld(), Notifies);

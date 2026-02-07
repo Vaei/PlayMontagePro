@@ -3,8 +3,8 @@
 > [!IMPORTANT]
 > **Play Montage Pro (PMP)**
 > <br>Reliable Gameplay Notify System
-> <br>Multi-Mesh/Montage Support
 > <br>Additional Blending Parameters
+> <br>Event Tags
 > <br>And its **FREE!**
 
 > [!TIP]
@@ -22,12 +22,12 @@
 
 > [!NOTE]
 > Have you heard the common phrase "Animation should not affect gameplay"?
-> <br>But you've probably already built notifies that reload your weapon - and more - without experiencing issues :disguised_face:
-> <br><br>Its a trap that catches you later in production: The heavier your game gets, the less likely Anim Notifies are to fire :dizzy_face: 
+> <br>But you've probably already built notifies that reload your weapon - and more - without experiencing issues.
+> <br><br>Its a trap that catches you later in production: The heavier your game gets, the less likely Anim Notifies are to fire.
 > <br><br>This is true for Queued notifies. The alternative is Branching Point notifies
-> <br>However, when two or more Branching Point notifies trigger on the same frame, only one will trigger! :skull:
-> <br><br>What if you had a notify that changes the movement mode away from Flying? You can get **stuck** in Flying! :space_invader:
-> <br><br>There is no anim notify system in Unreal that ensures your notifies will fire reliably. PMP is the solution to this. :boom:
+> <br>However, when two or more Branching Point notifies trigger on the same frame, only one will trigger!
+> <br><br>What if you had a notify that changes the movement mode away from Flying? You can get **stuck** in Flying!
+> <br><br>There is no anim notify system in Unreal that ensures your notifies will fire reliably. PMP is the solution to this.
 
 > [!TIP]
 > At it's core PMP uses timers to trigger notifies when you play a montage or change montage sections
@@ -45,10 +45,7 @@ Otherwise, use the existing notify system.
 	* Gameplay Timers triggering notifies reliably
  	* Trigger notifies placed prior to the anim start time
   	* Ensure notifies trigger on anim end, even if they were not reached
-* Multi-mesh support with Driver, Replicated Driven, and Local Driven Montages (`gas-pro` branch only)
-	* Driven Montages optionally match the duration of the Driver montage
- 	* Example use-case: TP character mesh Reloads (Driver), so their TP weapon plays a matching replicated driven montage (replicated so simulated proxies play the montage), FP character mesh and weapon both play their own Local Driven Montages (not replicated)
-  * Additional Blend in and out parameters (`gas-pro` branch only)
+* Additional Blend in and out parameters
 
 ## Limitations
 
@@ -76,12 +73,6 @@ Otherwise, use the existing notify system.
 
 ## Get PMP
 
-There are 3 branches available. The precompiled binaries are for `gas-pro` branch only as it contains all the features.
-
-* `main`	`PlayMontagePro()` only, no GAS dependency, supports Pro Notify System only
-* `gas` 	`PlayMontageProAndWait()` with support for gameplay abilities, supports Pro Notify System only
-* `gas-pro`:	`PlayMontageProAdvancedAndWait()`, with support for multiple driven meshes and gameplay events and additional blend parameters
-
 > [!WARNING]
 > [Download the pre-compiled binaries here](https://github.com/Vaei/PlayMontagePro/wiki/How-to-Use)
 
@@ -90,9 +81,17 @@ There are 3 branches available. The precompiled binaries are for `gas-pro` branc
 > [Read the Wiki to Learn How to use PlayMontagePro](https://github.com/Vaei/PlayMontagePro/wiki/How-to-Use)
 
 ## Credits
-Code was used from [GASShooter](https://github.com/tranek/GASShooter/) for multi-mesh/montage support and events
+Code was used from [GASShooter](https://github.com/tranek/GASShooter/) for events
 
 ## Changelog
+
+### 1.2.0
+* Rewrite large swathes of code to fix edge cases and remove code smells
+* Remove multi-mesh support
+	* This relied too heavily on third party implementations
+	* May return in the future, if better methods aren't determined
+* Greatly simplify branches
+	* Removed non-main branches; if GAS dependency not desired then fork and remove it manually
 
 ### 1.1.2
 * Refactor delegates to prevent python conflict
