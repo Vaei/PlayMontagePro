@@ -35,23 +35,44 @@ public:
 	 * @param Montage The montage to gather notifies from.
 	 * @param NotifyId The current notify ID, which will be incremented for each notify found.
 	 * @param Notifies The array to store the gathered notifies.
-	 * @param NotifyStatePairs A map to store pairs of notify state begin and end events.
+	 * @param NotifyStatePairs A map pairing notify state begin and end events by their NotifyId.
 	 * @param Section The section of the montage to gather notifies from.
 	 * @param StartPosition The starting position of the montage, used to calculate notify times.
 	 * @param TimeDilation The time dilation factor to apply to the notify times.
 	 */
-	static void GatherNotifies(const UObject* TaskOwner, UAnimMontage* Montage, uint32& NotifyId, TArray<FAnimNotifyProEvent>& Notifies, 
-		TMap<FAnimNotifyProEvent, FAnimNotifyProEvent>& NotifyStatePairs, const FName& Section, float StartPosition, float TimeDilation);
+	static void GatherNotifies(const UObject* TaskOwner, UAnimMontage* Montage, uint32& NotifyId, TArray<FAnimNotifyProEvent>& Notifies,
+		TMap<uint32, uint32>& NotifyStatePairs, const FName& Section, float StartPosition, float TimeDilation);
+
+	/**
+	 * Finds the live notify event in the Notifies array matching the given NotifyId.
+	 * Returns a pointer into the array so callers always see the up-to-date broadcast/skip flags.
+	 * @param Notifies The array of notifies to search.
+	 * @param NotifyId The unique NotifyId to find (0 is treated as invalid).
+	 * @return Pointer to the matching live event, or nullptr if not found.
+	 */
+	static FAnimNotifyProEvent* FindNotifyById(TArray<FAnimNotifyProEvent>& Notifies, uint32 NotifyId);
+
+	/**
+	 * Resolves the live paired notify state event (begin <-> end) for the given event.
+	 * The pair is looked up by NotifyId and resolved against the live Notifies array, so the
+	 * returned pointer reflects the current broadcast/skip state rather than a stale copy.
+	 * @param Notifies The array of notifies that owns the live events.
+	 * @param NotifyStatePairs The map pairing begin and end events by NotifyId.
+	 * @param Event The event whose pair should be resolved.
+	 * @return Pointer to the live paired event, or nullptr if the event has no pair.
+	 */
+	static FAnimNotifyProEvent* FindNotifyStatePair(TArray<FAnimNotifyProEvent>& Notifies,
+		const TMap<uint32, uint32>& NotifyStatePairs, const FAnimNotifyProEvent& Event);
 
 	/**
 	 * Handles historic notifies, triggering them before the start time if specified, or marking them as skipped.
 	 * @param Notifies The array of notifies to handle.
-	 * @param NotifyStatePairs A map of notify state pairs to assist in handling end states.
+	 * @param NotifyStatePairs A map pairing begin and end events by NotifyId, to assist in handling end states.
 	 * @param bTriggerNotifiesBeforeStartTime Whether to trigger notifies before the start time.
 	 * @param StartTime The start time of the montage, used to determine which notifies are historic.
 	 * @param Interface The interface to use for broadcasting notify events.
 	 */
-	static void HandleHistoricNotifies(TArray<FAnimNotifyProEvent>& Notifies, TMap<FAnimNotifyProEvent, FAnimNotifyProEvent>& NotifyStatePairs, 
+	static void HandleHistoricNotifies(TArray<FAnimNotifyProEvent>& Notifies, const TMap<uint32, uint32>& NotifyStatePairs,
 		bool bTriggerNotifiesBeforeStartTime, float StartTime, IPlayMontageProInterface* Interface);
 
 	/**
@@ -81,11 +102,11 @@ public:
 	 * Ensures that broadcast notify events are triggered for the specified event type.
 	 * @param EventType The type of event to ensure is broadcasted.
 	 * @param Notifies The array of notifies to check and broadcast.
-	 * @param NotifyStatePairs A map of notify state pairs to assist in broadcasting end states.
+	 * @param NotifyStatePairs A map pairing begin and end events by NotifyId, to assist in broadcasting end states.
 	 * @param Interface The interface to use for broadcasting the events.
 	 */
-	static void EnsureBroadcastNotifyEvents(EAnimNotifyProEventType EventType, TArray<FAnimNotifyProEvent>& Notifies, 
-		TMap<FAnimNotifyProEvent, FAnimNotifyProEvent>& NotifyStatePairs, IPlayMontageProInterface* Interface);
+	static void EnsureBroadcastNotifyEvents(EAnimNotifyProEventType EventType, TArray<FAnimNotifyProEvent>& Notifies,
+		const TMap<uint32, uint32>& NotifyStatePairs, IPlayMontageProInterface* Interface);
 
 	/**
 	 * Handles time dilation for the montage, adjusting the TimeDilation factor and triggering notifies as needed.

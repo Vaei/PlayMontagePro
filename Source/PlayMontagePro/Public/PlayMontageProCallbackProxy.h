@@ -48,8 +48,9 @@ class PLAYMONTAGEPRO_API UPlayMontageProCallbackProxy : public UObject, public I
 	UPROPERTY()
 	TArray<FAnimNotifyProEvent> Notifies;
 		
+	/** Pairs notify state begin and end events by NotifyId, resolved against Notifies for live state */
 	UPROPERTY()
-	TMap<FAnimNotifyProEvent, FAnimNotifyProEvent> NotifyStatePairs;
+	TMap<uint32, uint32> NotifyStatePairs;
 	
 	// Called to perform the query internally
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = "true"))
@@ -67,7 +68,8 @@ public:
 	// Begin IPlayMontageProInterface
 	virtual void BroadcastNotifyEvent(FAnimNotifyProEvent& Event) override
 	{
-		UPlayMontageProStatics::BroadcastNotifyEvent(Event, NotifyStatePairs.Find(Event), this);
+		UPlayMontageProStatics::BroadcastNotifyEvent(Event,
+			UPlayMontageProStatics::FindNotifyStatePair(Notifies, NotifyStatePairs, Event), this);
 	}
 
 	virtual UAnimMontage* GetMontage() const override final { return Montage.IsValid() ? Montage.Get() : nullptr; }

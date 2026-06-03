@@ -88,6 +88,10 @@ Code was used from [GASShooter](https://github.com/tranek/GASShooter/) for event
 
 ## Changelog
 
+###
+1.2.1
+* Fix bug resulting in double notify trigger
+
 ### 1.2.0
 * Rewrite large swathes of code to fix edge cases and remove code smells
 * Remove multi-mesh support

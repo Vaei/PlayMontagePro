@@ -23,14 +23,15 @@ float UPlayMontageProStatics::GetMontagePlayRateScaledByDuration(const UAnimMont
 }
 
 void UPlayMontageProStatics::GatherNotifies(const UObject* TaskOwner, UAnimMontage* Montage, uint32& NotifyId,
-	TArray<FAnimNotifyProEvent>& Notifies, TMap<FAnimNotifyProEvent, FAnimNotifyProEvent>& NotifyStatePairs, 
+	TArray<FAnimNotifyProEvent>& Notifies, TMap<uint32, uint32>& NotifyStatePairs,
 	const FName& Section, float StartPosition, float TimeDilation)
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(UPlayMontageProStatics::GatherNotifies);
 
 	const int32 SectionIndex = Montage->GetSectionIndex(Section);
-	
+
 	Notifies.Reset();
+	NotifyStatePairs.Reset();
 	TArray<FAnimNotifyEvent>& MontageNotifies = Montage->Notifies;
 	for (FAnimNotifyEvent& MontageNotify : MontageNotifies)
 	{
@@ -91,26 +92,52 @@ void UPlayMontageProStatics::GatherNotifies(const UObject* TaskOwner, UAnimMonta
 			int32 BeginIndex = Notifies.Add(NotifyBeginEvent);
 			int32 EndIndex = Notifies.Add(NotifyEndEvent);
 
-			// Pair begin and end states
+			// Pair begin and end states by NotifyId so the pair always resolves to the live event.
+			// Storing copies of the events here would let their bHasBroadcast/bNotifySkipped flags go
+			// stale relative to the entries in Notifies, which caused the begin state to broadcast twice.
 			if (ensure(Notifies[BeginIndex].IsValidEvent() && Notifies[EndIndex].IsValidEvent()))
 			{
-				NotifyStatePairs.Add(Notifies[BeginIndex], Notifies[EndIndex]);
-				NotifyStatePairs.Add(Notifies[EndIndex], Notifies[BeginIndex]);
+				NotifyStatePairs.Add(Notifies[BeginIndex].NotifyId, Notifies[EndIndex].NotifyId);
+				NotifyStatePairs.Add(Notifies[EndIndex].NotifyId, Notifies[BeginIndex].NotifyId);
 			}
 		}
 	}
 }
 
+FAnimNotifyProEvent* UPlayMontageProStatics::FindNotifyById(TArray<FAnimNotifyProEvent>& Notifies, uint32 NotifyId)
+{
+	if (NotifyId == 0)
+	{
+		return nullptr;
+	}
+
+	for (FAnimNotifyProEvent& Notify : Notifies)
+	{
+		if (Notify.NotifyId == NotifyId)
+		{
+			return &Notify;
+		}
+	}
+	return nullptr;
+}
+
+FAnimNotifyProEvent* UPlayMontageProStatics::FindNotifyStatePair(TArray<FAnimNotifyProEvent>& Notifies,
+	const TMap<uint32, uint32>& NotifyStatePairs, const FAnimNotifyProEvent& Event)
+{
+	const uint32* PairedId = NotifyStatePairs.Find(Event.NotifyId);
+	return PairedId ? FindNotifyById(Notifies, *PairedId) : nullptr;
+}
+
 void UPlayMontageProStatics::HandleHistoricNotifies(TArray<FAnimNotifyProEvent>& Notifies,
-	TMap<FAnimNotifyProEvent, FAnimNotifyProEvent>& NotifyStatePairs, bool bTriggerNotifiesBeforeStartTime, 
+	const TMap<uint32, uint32>& NotifyStatePairs, bool bTriggerNotifiesBeforeStartTime,
 	float StartTime, IPlayMontageProInterface* Interface)
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(UPlayMontageProStatics::TriggerHistoricNotifies);
-	
+
 	// Trigger notifies before start time and remove them, if we want to trigger them before the start time
 	for (FAnimNotifyProEvent& Notify : Notifies)
 	{
-		FAnimNotifyProEvent* NotifyStatePair = NotifyStatePairs.Find(Notify);
+		FAnimNotifyProEvent* NotifyStatePair = FindNotifyStatePair(Notifies, NotifyStatePairs, Notify);
 		
 		if (FMath::IsNearlyEqual(Notify.Time, StartTime, UE_KINDA_SMALL_NUMBER))
 		{
@@ -215,7 +242,7 @@ void UPlayMontageProStatics::BroadcastNotifyEvent(FAnimNotifyProEvent& Event, FA
 }
 
 void UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType EventType,	TArray<FAnimNotifyProEvent>& Notifies,
-	TMap<FAnimNotifyProEvent, FAnimNotifyProEvent>& NotifyStatePairs, IPlayMontageProInterface* Interface)
+	const TMap<uint32, uint32>& NotifyStatePairs, IPlayMontageProInterface* Interface)
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(UPlayMontageProStatics::EnsureBroadcastNotifyEvents);
 	
@@ -234,7 +261,7 @@ void UPlayMontageProStatics::EnsureBroadcastNotifyEvents(EAnimNotifyProEventType
 		}
 		
 		// Ensure that the end state is reached if the start state notify was triggered
-		const FAnimNotifyProEvent* NotifyStatePair = NotifyStatePairs.Find(Event);
+		const FAnimNotifyProEvent* NotifyStatePair = FindNotifyStatePair(Notifies, NotifyStatePairs, Event);
 		if (EventType != EAnimNotifyProEventType::BlendOut && Event.bIsEndState && NotifyStatePair && NotifyStatePair->bHasBroadcast)
 		{
 			Interface->BroadcastNotifyEvent(Event);
