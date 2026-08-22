@@ -119,7 +119,6 @@ public:
 protected:
 	void OnGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload);
 	
-	UFUNCTION()
 	void OnMontageSectionChanged(UAnimMontage* InMontage, FName SectionName, bool bLooped);
 	
 	UFUNCTION()
@@ -134,6 +133,7 @@ protected:
 	FOnMontageBlendedInEnded BlendedInDelegate;
 	FOnMontageBlendingOutStarted BlendingOutDelegate;
 	FOnMontageEnded MontageEndedDelegate;
+	FOnMontageSectionChanged SectionChangedDelegate;
 	FDelegateHandle InterruptedHandle;
 
 	UPROPERTY()

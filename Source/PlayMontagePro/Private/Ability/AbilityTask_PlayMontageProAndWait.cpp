@@ -197,7 +197,8 @@ void UAbilityTask_PlayMontageProAndWait::Activate()
 				}
 
 				// Handle section changes
-				AnimInstance->OnMontageSectionChanged.AddDynamic(this, &ThisClass::OnMontageSectionChanged);
+				SectionChangedDelegate.BindUObject(this, &ThisClass::OnMontageSectionChanged);
+				AnimInstance->Montage_SetSectionChangedDelegate(SectionChangedDelegate, MontageToPlay);
 
 				// Gather notifies from montage
 				const FName Section = AnimInstance->Montage_GetCurrentSection(MontageToPlay);
@@ -351,6 +352,7 @@ bool UAbilityTask_PlayMontageProAndWait::StopPlayingMontage()
 				MontageInstance->OnMontageBlendedInEnded.Unbind();
 				MontageInstance->OnMontageBlendingOutStarted.Unbind();
 				MontageInstance->OnMontageEnded.Unbind();
+				MontageInstance->OnMontageSectionChanged.Unbind();
 			}
 
 			ASC->CurrentMontageStop();
