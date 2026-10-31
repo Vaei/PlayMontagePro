@@ -88,8 +88,11 @@ Code was used from [GASShooter](https://github.com/tranek/GASShooter/) for event
 
 ## Changelog
 
-###
-1.2.1
+### 1.2.2
+* Fix montage start section not being respected for timers
+* Fix Montage section changed delegates not unbinding from instance
+
+### 1.2.1
 * Fix bug resulting in double notify trigger
 
 ### 1.2.0

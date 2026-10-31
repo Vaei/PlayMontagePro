@@ -201,11 +201,14 @@ void UAbilityTask_PlayMontageProAdvancedAndWait::Activate()
 						TimeDilation = 1.f;
 					}
 
+					// Captured before the section jump adjusts it below
+					const float HistoricStartTime = StartTimeSeconds;
+
 					if (StartSection != NAME_None)
 					{
-						// PlayMontagePro needs to update StartingPosition to account for the section jump
-						const float NewPosition = AnimInstance->Montage_GetPosition(MontageToPlay);
-						StartTimeSeconds += (NewPosition - StartTimeSeconds);
+						// StartTimeSeconds is an offset from the section, so rebase it onto the section's position and play from there
+						StartTimeSeconds += AnimInstance->Montage_GetPosition(MontageToPlay);
+						AnimInstance->Montage_SetPosition(MontageToPlay, StartTimeSeconds);
 					}
 
 					// Handle section changes
@@ -217,7 +220,7 @@ void UAbilityTask_PlayMontageProAdvancedAndWait::Activate()
 					UPlayMontageProStatics::GatherNotifies(this, MontageToPlay, NotifyId, Notifies, NotifyStatePairs, Section, StartTimeSeconds, TimeDilation);
 
 					// Trigger notifies before start time and remove them, if we want to trigger them before the start time
-					UPlayMontageProStatics::HandleHistoricNotifies(Notifies, NotifyStatePairs, ProNotifyParams.bTriggerNotifiesBeforeStartTime, StartTimeSeconds, this);
+					UPlayMontageProStatics::HandleHistoricNotifies(Notifies, NotifyStatePairs, ProNotifyParams.bTriggerNotifiesBeforeStartTime, HistoricStartTime, this);
 
 					// Create timer delegates for notifies
 					UPlayMontageProStatics::SetupNotifyTimers(this, GetWorld(), Notifies);

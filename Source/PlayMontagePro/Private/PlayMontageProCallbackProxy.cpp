@@ -65,13 +65,16 @@ bool UPlayMontageProCallbackProxy::PlayMontagePro(USkeletalMeshComponent* InSkel
 					MontageInstanceID = MontageInstance->GetInstanceID();
 				}
 
+				// Captured before the section jump adjusts it below
+				const float HistoricStartTime = StartingPosition;
+
 				if (StartingSection != NAME_None)
 				{
 					AnimInstance->Montage_JumpToSection(StartingSection, MontageToPlay);
 
-					// PlayMontagePro needs to update StartingPosition to account for the section jump
-					const float NewPosition = AnimInstance->Montage_GetPosition(MontageToPlay);
-					StartingPosition += (NewPosition - StartingPosition);
+					// StartingPosition is an offset from the section, so rebase it onto the section's position and play from there
+					StartingPosition += AnimInstance->Montage_GetPosition(MontageToPlay);
+					AnimInstance->Montage_SetPosition(MontageToPlay, StartingPosition);
 				}
 
 				BlendingOutDelegate.BindUObject(this, &ThisClass::OnMontageBlendingOut);
@@ -101,7 +104,7 @@ bool UPlayMontageProCallbackProxy::PlayMontagePro(USkeletalMeshComponent* InSkel
 				UPlayMontageProStatics::GatherNotifies(this, MontageToPlay, NotifyId, Notifies, NotifyStatePairs, Section, StartingPosition, TimeDilation);
 
 				// Trigger notifies before start time and remove them, if we want to trigger them before the start time
-				UPlayMontageProStatics::HandleHistoricNotifies(Notifies, NotifyStatePairs, bTriggerNotifiesBeforeStartTime, StartingPosition, this);
+				UPlayMontageProStatics::HandleHistoricNotifies(Notifies, NotifyStatePairs, bTriggerNotifiesBeforeStartTime, HistoricStartTime, this);
 
 				// Create timer delegates for notifies
 				UPlayMontageProStatics::SetupNotifyTimers(this, MeshComp->GetWorld(), Notifies);
